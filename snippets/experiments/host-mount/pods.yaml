@@ -1,0 +1,64 @@
+# Читающий под с hostPID без privileged. Проверяет вызов mount из контейнера.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpid-mount-nopriv
+  labels:
+    case: host-mount
+spec:
+  terminationGracePeriodSeconds: 1
+  hostPID: true
+  containers:
+    - name: mount-container
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: false
+        runAsUser: 0
+        runAsGroup: 0
+---
+# Тот же режим, privileged включён. Диск узла монтируется из контейнера.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpid-mount-priv
+  labels:
+    case: host-mount
+spec:
+  terminationGracePeriodSeconds: 1
+  hostPID: true
+  containers:
+    - name: mount-container
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: true
+        runAsUser: 0
+        runAsGroup: 0
+---
+# Каталог /etc узла смонтирован kubelet через hostPath. privileged выключен.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-mount
+  labels:
+    case: host-mount
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: mount-container
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: false
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: host-etc
+          mountPath: /host-etc
+          readOnly: true
+  volumes:
+    - name: host-etc
+      hostPath:
+        path: /etc

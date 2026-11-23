@@ -1,0 +1,44 @@
+# Проверка, что профили Localhost применились.
+# Сначала daemonsets.yaml, оба DaemonSet в Ready, затем этот файл.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# Образ alpine:3.20 — как у заданий стенда.
+# У seccomp-localhost AppArmor снят, у apparmor-localhost снят seccomp: проверяем один профиль.
+# hostUsers не задан: под в пространстве пользователей узла.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: seccomp-localhost
+  labels:
+    case: localhost-profiles
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        seccompProfile:
+          type: Localhost
+          localhostProfile: kuberconf-pivot-root.json
+        appArmorProfile:
+          type: Unconfined
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apparmor-localhost
+  labels:
+    case: localhost-profiles
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        seccompProfile:
+          type: Unconfined
+        appArmorProfile:
+          type: Localhost
+          localhostProfile: kuberconf-localhost

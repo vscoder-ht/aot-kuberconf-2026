@@ -1,0 +1,65 @@
+# Кейс seccomp: без CAP_SYS_ADMIN RuntimeDefault режет unshare.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# Образ alpine:3.20 — как у заданий стенда: в нём есть unshare, mount и pivot_root.
+# Поле capabilities не задано: в наборе нет SYS_ADMIN.
+# AppArmor Unconfined у всех: иначе отказ deny mount смешается с фильтром.
+# hostUsers не задан: под в пространстве пользователей узла.
+# В command только sleep. Показ — один kubectl exec: unshare -Urm,
+# внутри mount и pivot_root. Пространство монтирования своё, корень пода не меняется.
+---
+# Негативный кейс: профиль containerd RuntimeDefault.
+# Под стартует: runc узла входит в корень до установки фильтра.
+# unshare из kubectl exec — уже внутри, фильтр его видит.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: seccomp-runtime-default
+  labels:
+    case: seccomp-pivot-root
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        appArmorProfile:
+          type: Unconfined
+---
+# Позитивный кейс: фильтр снят. Та же команда проходит.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: seccomp-unconfined
+  labels:
+    case: seccomp-pivot-root
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        seccompProfile:
+          type: Unconfined
+        appArmorProfile:
+          type: Unconfined
+---
+# Поле seccompProfile не задано. Остальное совпадает с парой выше.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: seccomp-unset
+  labels:
+    case: seccomp-pivot-root
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        appArmorProfile:
+          type: Unconfined

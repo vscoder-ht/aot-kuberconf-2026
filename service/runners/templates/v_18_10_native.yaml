@@ -1,0 +1,16 @@
+gitlabUrl: ${gitlab_url}
+image:
+  tag: alpine-v18.10.1
+rbac:
+  create: true
+runners:
+  executor: kubernetes
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        [runners.kubernetes.build_container_security_context.seccomp_profile]
+          type = "RuntimeDefault"
+        [runners.kubernetes.build_container_security_context.app_armor_profile]
+          type = "RuntimeDefault"

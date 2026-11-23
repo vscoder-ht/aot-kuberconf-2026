@@ -1,0 +1,26 @@
+gitlabUrl: ${gitlab_url}
+image:
+  tag: alpine-v19.5.3
+rbac:
+  create: true
+runners:
+  executor: kubernetes
+  config: |
+    [[runners]]
+      [runners.feature_flags]
+        FF_USE_ADVANCED_POD_SPEC_CONFIGURATION = true
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        [runners.kubernetes.pod_annotations]
+          "container.apparmor.security.beta.kubernetes.io/build" = "runtime/default"
+        [[runners.kubernetes.pod_spec]]
+          name = "build seccomp RuntimeDefault"
+          patch_type = "strategic"
+          patch = '''
+            containers:
+            - name: build
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+          '''

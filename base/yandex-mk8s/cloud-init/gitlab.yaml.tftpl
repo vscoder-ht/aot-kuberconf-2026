@@ -1,0 +1,111 @@
+#cloud-config
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - openssl
+  - curl
+  - ca-certificates
+
+write_files:
+  - path: /srv/gitlab/docker-compose.yml
+    permissions: "0644"
+    content: |
+      services:
+        gitlab:
+          image: ${gitlab_image}
+          container_name: gitlab
+          hostname: %{ if gitlab_letsencrypt_enabled }${gitlab_domain}%{ else }${gitlab_public_ip}%{ endif }
+          restart: always
+          shm_size: "256m"
+          environment:
+            GITLAB_OMNIBUS_CONFIG: |
+              external_url '%{ if gitlab_letsencrypt_enabled }https://${gitlab_domain}%{ else }http://${gitlab_public_ip}%{ endif }'
+              gitlab_rails['initial_root_password'] = '$${GITLAB_ROOT_PASSWORD}'
+              gitlab_rails['gitlab_shell_ssh_port'] = 2222
+%{ if gitlab_letsencrypt_enabled ~}
+              letsencrypt['enable'] = true
+              letsencrypt['contact_emails'] = ['${gitlab_acme_email}']
+%{ endif ~}
+              puma['worker_processes'] = 0
+              sidekiq['max_concurrency'] = 10
+              prometheus_monitoring['enable'] = false
+          ports:
+            - "80:80"
+            - "443:443"
+            - "2222:22"
+          volumes:
+            - /srv/gitlab/config:/etc/gitlab
+            - /srv/gitlab/logs:/var/log/gitlab
+            - /srv/gitlab/data:/var/opt/gitlab
+
+  - path: /usr/local/sbin/gitlab-up
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      install -d -m 0755 /srv/gitlab /srv/gitlab/config /srv/gitlab/logs /srv/gitlab/data
+      if [[ ! -f /srv/gitlab/.env ]]; then
+        password="$(openssl rand -base64 24 | tr -d '\n')"
+        umask 077
+        cat > /srv/gitlab/.env <<EOF
+      GITLAB_ROOT_PASSWORD=$password
+      EOF
+        chmod 600 /srv/gitlab/.env
+      fi
+      cd /srv/gitlab
+      docker compose up -d
+
+  - path: /etc/systemd/system/gitlab.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=GitLab CE
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/srv/gitlab
+      ExecStart=/usr/local/sbin/gitlab-up
+      ExecStop=/usr/bin/docker compose down
+      TimeoutStartSec=1800
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/local/sbin/k3s-install-once
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      if [[ -x /usr/local/bin/k3s ]]; then
+        exit 0
+      fi
+      curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${k3s_version}' sh -s - --write-kubeconfig-mode 644 --tls-san '${k3s_tls_san}' --disable=traefik
+
+  - path: /etc/systemd/system/k3s-install.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Install k3s
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/local/sbin/k3s-install-once
+      TimeoutStartSec=900
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable --now docker.service
+  - systemctl enable gitlab.service
+  - systemctl start --no-block gitlab.service
+  - systemctl enable k3s-install.service
+  - systemctl start --no-block k3s-install.service

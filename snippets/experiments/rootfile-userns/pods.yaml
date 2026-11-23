@@ -1,0 +1,53 @@
+# Чтение файла root из пода с hostUsers: false. Оба пода монтируют один каталог.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# hostUsers — поле пода. С hostPID, hostNetwork и hostIPC его задать нельзя.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rootfile-userns0
+  labels:
+    case: rootfile-userns
+spec:
+  hostUsers: false
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: reader
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/rootread
+        type: Directory
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rootfile-userns1000
+  labels:
+    case: rootfile-userns
+spec:
+  hostUsers: false
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: reader
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/rootread
+        type: Directory

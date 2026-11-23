@@ -1,0 +1,26 @@
+# Helm-релиз v_18_10_patch. У v_19_5_patch тот же фрагмент, Helm-релиз не открываем.
+# Чарт 0.87.1, image.tag alpine-v18.10.1. gitlabUrl на стенде подставляет Terraform.
+
+image:
+  tag: alpine-v18.10.1
+runners:
+  executor: kubernetes
+  config: |
+    [[runners]]
+      [runners.feature_flags]
+        FF_USE_ADVANCED_POD_SPEC_CONFIGURATION = true
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        [runners.kubernetes.pod_annotations]
+          "container.apparmor.security.beta.kubernetes.io/build" = "runtime/default"
+        [[runners.kubernetes.pod_spec]]
+          name = "build seccomp RuntimeDefault"
+          patch_type = "strategic"
+          patch = '''
+            containers:
+            - name: build
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+          '''

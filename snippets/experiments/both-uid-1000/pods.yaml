@@ -1,0 +1,52 @@
+# Секрет этой проверки. password — base64 от both_uid_1000_password, без перевода строки.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: both-uid-1000
+  labels:
+    case: hostpid-both-uid-1000
+type: Opaque
+data:
+  password: Ym90aF91aWRfMTAwMF9wYXNzd29yZA==
+---
+# Под с секретом от uid 1000. tail читает /tmp/both-uid-1000,
+# чтобы отличить процесс от других tail на узле.
+# terminationGracePeriodSeconds: 1 — sh и sleep не ловят SIGTERM.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-uid1000
+  labels:
+    case: hostpid-both-uid-1000
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: secret-container
+      image: busybox
+      command: ["sh", "-c", "touch /tmp/both-uid-1000; exec tail -f /tmp/both-uid-1000"]
+      envFrom:
+        - secretRef:
+            name: both-uid-1000
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+---
+# Читающий под от uid 1000 с hostPID: true.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpid-uid1000
+  labels:
+    case: hostpid-both-uid-1000
+spec:
+  terminationGracePeriodSeconds: 1
+  hostPID: true
+  containers:
+    - name: hostpid-container
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000

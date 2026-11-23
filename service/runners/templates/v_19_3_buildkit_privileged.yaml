@@ -1,0 +1,36 @@
+gitlabUrl: ${gitlab_url}
+image:
+  tag: alpine-v19.5.3
+rbac:
+  create: true
+runners:
+  executor: kubernetes
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        privileged = true
+        memory_request = "256Mi"
+        memory_limit = "1Gi"
+        builds_dir = "/tmp/builds"
+        logs_base_dir = "/tmp"
+        scripts_base_dir = "/tmp"
+%{ if seccomp_localhost_profile != "" ~}
+
+        [runners.kubernetes.build_container_security_context.seccomp_profile]
+          type = "${seccomp_type}"
+          localhost_profile = "${seccomp_localhost_profile}"
+
+        [runners.kubernetes.build_container_security_context.app_armor_profile]
+          type = "${apparmor_type}"
+          localhost_profile = "${apparmor_localhost_profile}"
+%{ endif ~}
+
+        [[runners.kubernetes.volumes.empty_dir]]
+          name = "buildkit-lib"
+          mount_path = "/var/lib/buildkit"
+
+        [[runners.kubernetes.volumes.empty_dir]]
+          name = "buildkit-tmp"
+          mount_path = "/tmp"

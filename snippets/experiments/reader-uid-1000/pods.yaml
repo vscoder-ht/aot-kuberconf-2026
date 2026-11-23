@@ -1,0 +1,50 @@
+# Секрет этой проверки. password — base64 от reader_uid_1000_password, без перевода строки.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reader-uid-1000
+  labels:
+    case: hostpid-reader-uid-1000
+type: Opaque
+data:
+  password: cmVhZGVyX3VpZF8xMDAwX3Bhc3N3b3Jk
+---
+# Под с секретом от uid 0. tail читает /tmp/reader-uid-1000,
+# чтобы отличить процесс от других tail на узле.
+# terminationGracePeriodSeconds: 1 — sh и sleep не ловят SIGTERM.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-uid0
+  labels:
+    case: hostpid-reader-uid-1000
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: secret-container
+      image: busybox
+      command: ["sh", "-c", "touch /tmp/reader-uid-1000; exec tail -f /tmp/reader-uid-1000"]
+      envFrom:
+        - secretRef:
+            name: reader-uid-1000
+      securityContext:
+        privileged: false
+---
+# Читающий под от uid 1000.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpid-noroot
+  labels:
+    case: hostpid-reader-uid-1000
+spec:
+  terminationGracePeriodSeconds: 1
+  hostPID: true
+  containers:
+    - name: hostpid-container
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000

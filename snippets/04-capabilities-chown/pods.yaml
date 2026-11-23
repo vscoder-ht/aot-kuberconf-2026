@@ -1,0 +1,46 @@
+# Кейс capabilities: drop: [ALL] и возврат одного права.
+# terminationGracePeriodSeconds: 1 — tail не ловит SIGTERM, без этого поля
+# под полминуты висит в Terminating.
+# Оба пода — alpine:3.20 от root, при старте создают файл /root/artifact.
+# capsh в образ не входит: пакет libcap ставится в уже запущенный контейнер.
+# Команда кейса — chown 1000 /root/artifact: так сборка готовит файлы
+# под непривилегированного пользователя образа (COPY --chown, RUN chown).
+---
+# Под без capabilities: весь набор среды выполнения снят.
+# chown здесь отвечает Operation not permitted, хотя процесс — root.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cap-drop-pod
+  labels:
+    case: capabilities-chown
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: drop-container
+      image: alpine:3.20
+      command: ["sh", "-c", "touch /root/artifact && tail -f /dev/null"]
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+---
+# Тот же под с возвращённым CHOWN: chown проходит.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cap-add-pod
+  labels:
+    case: capabilities-chown
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: add-container
+      image: alpine:3.20
+      command: ["sh", "-c", "touch /root/artifact && tail -f /dev/null"]
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+          add:
+            - CHOWN

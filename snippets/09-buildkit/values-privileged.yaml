@@ -1,0 +1,38 @@
+# Helm-релиз mk8s-v-19-3-buildkit-privileged.
+# Источник: vsc-kuberconf-aot-2026-stand/service/runners/templates/v_19_3_buildkit_privileged.yaml
+# Ниже значения после подстановки для mk8s. На k3s секции профилей нет.
+# Чарт gitlab-runner 0.94.3. gitlabUrl и runnerToken подставляет Terraform.
+# Кроме privileged = true и профилей Localhost поля чек-листа не заданы.
+# При privileged = true среда выполнения профили seccomp и AppArmor не применяет.
+
+image:
+  tag: alpine-v19.5.3
+runners:
+  executor: kubernetes
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        privileged = true
+        memory_request = "256Mi"
+        memory_limit = "1Gi"
+        builds_dir = "/tmp/builds"
+        logs_base_dir = "/tmp"
+        scripts_base_dir = "/tmp"
+
+        [runners.kubernetes.build_container_security_context.seccomp_profile]
+          type = "Localhost"
+          localhost_profile = "stand-buildkit.json"
+
+        [runners.kubernetes.build_container_security_context.app_armor_profile]
+          type = "Localhost"
+          localhost_profile = "stand-buildkit"
+
+        [[runners.kubernetes.volumes.empty_dir]]
+          name = "buildkit-lib"
+          mount_path = "/var/lib/buildkit"
+
+        [[runners.kubernetes.volumes.empty_dir]]
+          name = "buildkit-tmp"
+          mount_path = "/tmp"

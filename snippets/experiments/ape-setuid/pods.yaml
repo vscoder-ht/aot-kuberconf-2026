@@ -1,0 +1,37 @@
+# Пара allowPrivilegeEscalation. Оба пода от uid 0, privileged не задан.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# Образ archlinux: /usr/bin/cat — файл coreutils, setpriv уже в образе.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ape-true
+  labels:
+    case: ape-setuid
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: archlinux:latest
+      command: ["sleep", "infinity"]
+      securityContext:
+        allowPrivilegeEscalation: true
+        runAsUser: 0
+        runAsGroup: 0
+---
+# false выставляет no_new_privs: на execve бит setuid не применяется.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ape-false
+  labels:
+    case: ape-setuid
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: archlinux:latest
+      command: ["sleep", "infinity"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsUser: 0
+        runAsGroup: 0

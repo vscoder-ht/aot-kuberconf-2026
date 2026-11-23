@@ -1,0 +1,105 @@
+# Пара без hostUsers. Оба пода от uid 1000, общий каталог узла.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: writer-host
+  labels:
+    case: shared-uid
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: writer
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/kuberconf-shared-host
+        type: Directory
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: reader-host
+  labels:
+    case: shared-uid
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: reader
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/kuberconf-shared-host
+        type: Directory
+---
+# Пара с hostUsers: false. Тот же uid внутри, свой каталог на узле.
+# hostUsers — поле пода. С hostPID, hostNetwork и hostIPC его задать нельзя.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: writer-userns
+  labels:
+    case: shared-uid
+spec:
+  hostUsers: false
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: writer
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/kuberconf-shared-userns
+        type: Directory
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: reader-userns
+  labels:
+    case: shared-uid
+spec:
+  hostUsers: false
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: reader
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/kuberconf-shared-userns
+        type: Directory

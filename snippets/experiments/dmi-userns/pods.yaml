@@ -1,0 +1,35 @@
+# Сведения узла. Оба пода от uid 0, privileged не задан.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: info-host
+  labels:
+    case: dmi-userns
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: sleep
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+---
+# hostUsers — поле пода. Том не задан: читаем /proc и /sys контейнера.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: info-userns
+  labels:
+    case: dmi-userns
+spec:
+  hostUsers: false
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: sleep
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0

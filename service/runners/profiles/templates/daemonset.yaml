@@ -1,0 +1,79 @@
+# Доставка профилей сборки на узел mk8s.
+# ConfigMap stand-buildkit-profiles собирает этот же чарт из stand-buildkit.json и stand-buildkit.apparmor.
+# Имена не совпадают с объектами сниппета в пространстве имён default:
+# buildkit-seccomp-installer, buildkit-apparmor-installer, buildkit.json, buildkit.
+# Удаление DaemonSet файл seccomp и профиль AppArmor в ядре не снимает.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stand-buildkit-profiles
+  labels:
+    app: stand-buildkit-profiles
+    case: stand-buildkit
+spec:
+  selector:
+    matchLabels:
+      app: stand-buildkit-profiles
+  template:
+    metadata:
+      labels:
+        app: stand-buildkit-profiles
+        case: stand-buildkit
+      annotations:
+        checksum/profiles: {{ printf "%s%s" (.Files.Get "stand-buildkit.json") (.Files.Get "stand-buildkit.apparmor") | sha256sum | quote }}
+    spec:
+      hostPID: true
+      containers:
+        - name: installer
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              cp /profile/stand-buildkit.json /host/var/lib/kubelet/seccomp/stand-buildkit.json
+              cp /profile/stand-buildkit /host/etc/apparmor.d/stand-buildkit
+              enabled="$(nsenter -t 1 -m -- cat /sys/module/apparmor/parameters/enabled)"
+              if [ "$enabled" != "Y" ]; then
+                echo "apparmor module is not enabled" >&2
+                exit 1
+              fi
+              parser=""
+              for candidate in /usr/sbin/apparmor_parser /sbin/apparmor_parser; do
+                if nsenter -t 1 -m -- test -x "$candidate"; then
+                  parser="$candidate"
+                  break
+                fi
+              done
+              if [ -z "$parser" ]; then
+                echo "apparmor_parser not found on the node" >&2
+                exit 1
+              fi
+              nsenter -t 1 -m -- "$parser" -r -W /etc/apparmor.d/stand-buildkit
+              touch /ready
+              sleep infinity
+          readinessProbe:
+            exec:
+              command: ["cat", "/ready"]
+            periodSeconds: 2
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: profile
+              mountPath: /profile
+              readOnly: true
+            - name: host-seccomp
+              mountPath: /host/var/lib/kubelet/seccomp
+            - name: host-apparmor
+              mountPath: /host/etc/apparmor.d
+      volumes:
+        - name: profile
+          configMap:
+            name: stand-buildkit-profiles
+        - name: host-seccomp
+          hostPath:
+            path: /var/lib/kubelet/seccomp
+            type: DirectoryOrCreate
+        - name: host-apparmor
+          hostPath:
+            path: /etc/apparmor.d
+            type: Directory

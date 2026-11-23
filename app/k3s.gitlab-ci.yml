@@ -1,0 +1,83 @@
+# Файл для проекта stand/stand-k3s.
+# Теги уже с префиксом k3s_. Имена заданий без префикса.
+
+v_18_10_native:
+  tags:
+    - k3s_v_18_10_native
+  rules:
+    - when: manual
+  script:
+    - sleep infinity
+
+v_18_10_patch:
+  tags:
+    - k3s_v_18_10_patch
+  rules:
+    - when: manual
+  script:
+    - sleep infinity
+
+v_19_5_native:
+  tags:
+    - k3s_v_19_5_native
+  rules:
+    - when: manual
+  script:
+    - sleep infinity
+
+v_19_5_patch:
+  tags:
+    - k3s_v_19_5_patch
+  rules:
+    - when: manual
+  script:
+    - sleep infinity
+
+v_19_5_unconfined:
+  tags:
+    - k3s_v_19_5_unconfined
+  rules:
+    - when: manual
+  script:
+    - sleep infinity
+
+v_19_5_runtime_default:
+  tags:
+    - k3s_v_19_5_runtime_default
+  rules:
+    - when: manual
+  script:
+    - sleep infinity
+
+.buildkit:
+  image:
+    name: $BUILDKIT_IMAGE
+    entrypoint: [""]
+  script:
+    - |
+      set -eu
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=. \
+        --local dockerfile=. \
+        --output type=local,dest=./out
+
+v_19_5_buildkit_privileged:
+  extends: .buildkit
+  tags:
+    - k3s_v_19_5_buildkit_privileged
+  rules:
+    - when: manual
+  variables:
+    BUILDKIT_IMAGE: moby/buildkit:v0.35.1
+    BUILDKITD_FLAGS: ""
+
+v_19_5_buildkit_rootless:
+  extends: .buildkit
+  tags:
+    - k3s_v_19_5_buildkit_rootless
+  rules:
+    - when: manual
+  variables:
+    BUILDKIT_IMAGE: moby/buildkit:v0.35.1-rootless
+    BUILDKITD_FLAGS: "--oci-worker-no-process-sandbox"

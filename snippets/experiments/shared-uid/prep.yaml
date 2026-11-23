@@ -1,0 +1,32 @@
+# Готовит два каталога на узле. Режим 1777 нужен, чтобы uid 1000 создал файл.
+# Сам файл проверки пишется отдельно и получает режим 0600.
+# terminationGracePeriodSeconds не задан: под завершается сам.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shared-uid-prep
+  labels:
+    case: shared-uid
+spec:
+  restartPolicy: Never
+  containers:
+    - name: prep
+      image: busybox
+      command: ["sh", "-c", "chmod 1777 /host /userns"]
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: host
+          mountPath: /host
+        - name: userns
+          mountPath: /userns
+  volumes:
+    - name: host
+      hostPath:
+        path: /var/tmp/kuberconf-shared-host
+        type: DirectoryOrCreate
+    - name: userns
+      hostPath:
+        path: /var/tmp/kuberconf-shared-userns
+        type: DirectoryOrCreate

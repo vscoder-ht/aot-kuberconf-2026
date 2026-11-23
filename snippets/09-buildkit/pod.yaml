@@ -1,0 +1,63 @@
+# Проверка профиля на том же контексте, что у Helm-релиза rootless.
+# Сначала seccomp-daemonset.yaml в Ready, затем этот файл.
+# AppArmor — свой профиль buildkit, уже загруженный в ядро.
+# Сначала apparmor-daemonset.yaml в Ready, затем этот файл.
+# hostUsers не задан: под в пространстве пользователей узла.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: buildkit-seccomp-check
+  labels:
+    case: buildkit-seccomp
+spec:
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 1
+  securityContext:
+    fsGroup: 1000
+  containers:
+    - name: build
+      image: moby/buildkit:v0.35.1-rootless
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -eu
+          mkdir -p /workspace/out
+          printf 'FROM alpine:3.20\nRUN echo ok\n' > /workspace/Dockerfile
+          buildctl-daemonless.sh build \
+            --frontend dockerfile.v0 \
+            --local context=/workspace \
+            --local dockerfile=/workspace \
+            --output type=local,dest=/workspace/out
+          echo BUILD_OK
+      env:
+        - name: BUILDKITD_FLAGS
+          value: "--oci-worker-no-process-sandbox"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: true
+        capabilities:
+          drop: ["ALL"]
+          add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "FSETID", "SETGID", "SETUID", "SETFCAP"]
+        seccompProfile:
+          type: Localhost
+          localhostProfile: buildkit.json
+        appArmorProfile:
+          type: Localhost
+          localhostProfile: buildkit
+      volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        - name: buildkit-state
+          mountPath: /home/user/.local/share/buildkit
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: workspace
+      emptyDir: {}
+    - name: buildkit-state
+      emptyDir: {}
+    - name: tmp
+      emptyDir: {}

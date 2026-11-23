@@ -1,0 +1,38 @@
+# Кейс procMount: Default прячет записи /proc, Unmasked снимает маску.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# Образ alpine:3.20 — как у заданий стенда.
+# hostUsers — поле пода, не контейнера. false нужен только поду с Unmasked:
+# без него API отклоняет Unmasked. У пода Default поле не задано.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: proc-mount-default
+  labels:
+    case: proc-mount
+spec:
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: default
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        procMount: Default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: proc-mount-unmasked
+  labels:
+    case: proc-mount
+spec:
+  hostUsers: false
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: unmasked
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        procMount: Unmasked

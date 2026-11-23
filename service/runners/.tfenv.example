@@ -1,0 +1,46 @@
+# Скопируйте этот файл в .tfenv.
+# Файл .tfenv в репозиторий не входит.
+# Команду source выполняйте из этого каталога после source каталога base/yandex-mk8s:
+# имя GitLab уже лежит в TF_VAR_gitlab_domain.
+
+# Публичный адрес GitLab.
+# Это выход gitlab_public_ip каталога base/yandex-mk8s.
+# Пример: TF_VAR_gitlab_public_ip="203.0.113.10"
+export TF_VAR_gitlab_public_ip=""
+
+# Публичный адрес API k3s. Совпадает с адресом машины GitLab.
+# Каталог runners значение не читает. kubeconfig пишет base/yandex-mk8s.
+# Пример: TF_VAR_k3s_public_ip="203.0.113.11"
+export TF_VAR_k3s_public_ip=""
+
+# Пользователь GitLab, которому выпускается токен.
+# Пример: TF_VAR_gitlab_username="terraform"
+export TF_VAR_gitlab_username="terraform"
+
+# true: пользователь создаётся, если его ещё нет.
+# false: пользователь уже есть, каталог его не создаёт.
+export TF_VAR_gitlab_user_create_enabled="true"
+
+# true: GitLab уже существует. Токен записан в TF_VAR_gitlab_token.
+# Адрес API задаётся целиком в TF_VAR_gitlab_base_url, не из имени стенда.
+# false: токен выпускается на машине GitLab стенда.
+export TF_VAR_gitlab_external_enabled="false"
+
+# Токен доступа внешнего GitLab, область api. В репозиторий не входит.
+export TF_VAR_gitlab_token=""
+
+# API GitLab.
+# При выключенном флаге имя берётся из каталога base/yandex-mk8s и второй раз не вводится.
+# При включённом флаге здесь полный адрес внешнего API, с суффиксом /api/v4.
+# Пример: TF_VAR_gitlab_base_url="https://gitlab.example.com/api/v4"
+export TF_VAR_gitlab_base_url="https://${TF_VAR_gitlab_domain}/api/v4"
+
+# kubeconfig k3s. Пустая строка не создаёт проект stand/stand-k3s.
+# Каталог base/yandex-mk8s пишет файл при своём apply.
+export TF_VAR_k3s_kubeconfig_path="$PWD/../../base/yandex-mk8s/kubeconfig/k3s.kubeconfig"
+
+# kubeconfig управляемого кластера. Пустая строка не создаёт проект stand/stand-mk8s.
+export TF_VAR_mk8s_kubeconfig_path="$PWD/../../base/yandex-mk8s/kubeconfig/mk8s.kubeconfig"
+
+# Группа GitLab. Проекты создаются в ней.
+export TF_VAR_gitlab_group_path="stand"

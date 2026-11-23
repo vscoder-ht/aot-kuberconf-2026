@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stand-buildkit-profiles
+  labels:
+    app: stand-buildkit-profiles
+    case: stand-buildkit
+data:
+  stand-buildkit.json: |
+{{ .Files.Get "stand-buildkit.json" | indent 4 }}
+  stand-buildkit: |
+{{ .Files.Get "stand-buildkit.apparmor" | indent 4 }}

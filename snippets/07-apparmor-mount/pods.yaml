@@ -1,0 +1,73 @@
+# Кейс AppArmor: RuntimeDefault режет mount, Unconfined снимает профиль.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# Образ alpine:3.20 — как у заданий стенда: в нём есть mount.
+# SYS_ADMIN у обоих: без него mount отвергается ещё до AppArmor.
+# seccomp Unconfined у обоих: иначе отказ pivot_root смешается с deny mount.
+# Пару seccomp-pivot-root не менять: там AppArmor Unconfined.
+# hostUsers не задан: под в пространстве пользователей узла.
+---
+# Негативный кейс: профиль containerd RuntimeDefault.
+# Под стартует: runc узла входит в корень до установки профиля.
+# mount из kubectl exec — уже внутри, профиль его видит.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apparmor-runtime-default
+  labels:
+    case: apparmor-mount
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        capabilities:
+          add:
+            - SYS_ADMIN
+        seccompProfile:
+          type: Unconfined
+        appArmorProfile:
+          type: RuntimeDefault
+---
+# Позитивный кейс: профиль снят. Та же команда проходит.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apparmor-unconfined
+  labels:
+    case: apparmor-mount
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        capabilities:
+          add:
+            - SYS_ADMIN
+        seccompProfile:
+          type: Unconfined
+        appArmorProfile:
+          type: Unconfined
+---
+# Поле appArmorProfile не задано. Остальное совпадает с парой выше.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apparmor-unset
+  labels:
+    case: apparmor-mount
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: alpine:3.20
+      command: ["sleep", "infinity"]
+      securityContext:
+        capabilities:
+          add:
+            - SYS_ADMIN
+        seccompProfile:
+          type: Unconfined

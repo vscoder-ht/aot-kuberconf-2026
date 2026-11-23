@@ -1,0 +1,26 @@
+# Создаёт на узле файл root режима 0600. Поле hostUsers не задано:
+# владелец на диске совпадает с uid процесса.
+# terminationGracePeriodSeconds не задан: под завершается сам.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rootfile-prep
+  labels:
+    case: rootfile-userns
+spec:
+  restartPolicy: Never
+  containers:
+    - name: prep
+      image: busybox
+      command: ["sh", "-c", "echo root-only-token > /data/token && chown 0:0 /data/token && chmod 600 /data/token && ls -ln /data/token"]
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      hostPath:
+        path: /var/tmp/rootread
+        type: DirectoryOrCreate

@@ -1,0 +1,20 @@
+# privileged и hostUsers: false. mount диска узла.
+# hostPID не задан: вместе с hostUsers: false API его не принимает.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: priv-userns
+  labels:
+    case: priv-userns
+spec:
+  hostUsers: false
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: mount
+      image: busybox
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: true
+        runAsUser: 0
+        runAsGroup: 0

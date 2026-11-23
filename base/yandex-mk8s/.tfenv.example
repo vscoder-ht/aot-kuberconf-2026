@@ -1,0 +1,27 @@
+# Скопируйте этот файл в .tfenv и заполните идентификаторы.
+# Файл .tfenv в репозиторий не входит.
+# Строка с токеном вызывает команду при source. Значение токена в файле не хранится.
+
+export YC_TOKEN="$(yc iam create-token)"
+export TF_VAR_cloud_id=""
+export TF_VAR_folder_id=""
+
+# Имя уже существующей сети VPC. По умолчанию default. Каталог создаёт в ней подсеть stand и новую сеть не создаёт.
+export TF_VAR_network_name="default"
+
+# Зона машины GitLab, мастера, узла и подсети.
+export TF_VAR_zone=""
+
+# Имя зарезервированного публичного адреса GitLab. Адрес создавать через yc, Terraform его только читает.
+export TF_VAR_gitlab_address_name="stand-gitlab"
+
+# Публикация GitLab.
+# true: external_url — https и имя из gitlab_domain, сертификат выпускает Omnibus.
+# false: external_url остаётся http и внутренним адресом, сертификат не выпускается.
+# Порты 80, 443 и 2222 открыты снаружи в обоих режимах.
+# Имя и почта в репозиторий не записываются. Имя и почта обязательны при включённом флаге.
+# Пример: TF_VAR_gitlab_domain="gitlab.example.com"
+# Пример: TF_VAR_gitlab_acme_email="gitlab-admin@example.com"
+export TF_VAR_gitlab_letsencrypt_enabled="true"
+export TF_VAR_gitlab_domain=""
+export TF_VAR_gitlab_acme_email=""

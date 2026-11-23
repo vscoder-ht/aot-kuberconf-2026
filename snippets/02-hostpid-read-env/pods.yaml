@@ -1,0 +1,51 @@
+# Под с секретом. privileged выключен.
+# terminationGracePeriodSeconds: 1 — tail и sleep не ловят SIGTERM,
+# без этого поля под полминуты висит в Terminating.
+# Ключи Secret попадают в окружение контейнера через envFrom.
+# Образ busybox: процесс tail хранит своё окружение в /proc/<pid>/environ.
+# nginx для этого не подходит: он перезаписывает environ заголовком процесса.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-pod
+  labels:
+    case: privileged-read-env
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: secret-container
+      image: busybox
+      command: ["tail", "-f", "/dev/null"]
+      envFrom:
+        # Все ключи Secret my-secret становятся переменными окружения.
+        - secretRef:
+            name: my-secret
+      securityContext:
+        privileged: false
+---
+# Секрет для secret-pod.
+# password — base64 от very_secure_password, без перевода строки.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+type: Opaque
+data:
+  password: dmVyeV9zZWN1cmVfcGFzc3dvcmQ=
+---
+# Под с hostPID: true. Поле privileged не задано.
+# Образ busybox: в нём есть ps и pidof. sleep держит под в Running для kubectl exec.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpid-pod
+  labels:
+    case: privileged-read-env
+spec:
+  terminationGracePeriodSeconds: 1
+  # Процессы узла видны в /proc пода.
+  hostPID: true
+  containers:
+    - name: hostpid-container
+      image: busybox
+      command: ["sleep", "infinity"]

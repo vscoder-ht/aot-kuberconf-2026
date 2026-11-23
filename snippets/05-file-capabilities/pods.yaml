@@ -1,0 +1,61 @@
+# Кейс файловых capabilities. Для справки, в показ не входит.
+# terminationGracePeriodSeconds: 1 — sleep не ловит SIGTERM.
+# Образ archlinux: настоящие arping (требует CAP_NET_RAW), setcap, getcap,
+# capsh и полноценный setpriv из util-linux — всё уже в образе.
+---
+# Базовый под. В нём ставится атрибут на /usr/sbin/arping. В нём же атрибут
+# проверяется против пустого ограничивающего набора: наборы снимаются вручную
+# через setpriv. drop в манифесте нет — иначе setcap не сработал бы,
+# SETFCAP был бы снят.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-drop-pod
+  labels:
+    case: file-capabilities
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: archlinux:latest
+      command: ["sleep", "infinity"]
+---
+# Негативный кейс: drop: [ALL] снимает NET_RAW из набора по умолчанию,
+# атрибута у файла ещё нет — arping не работает.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: drop-pod
+  labels:
+    case: file-capabilities
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: archlinux:latest
+      command: ["sleep", "infinity"]
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+---
+# Позитивный кейс: после drop: [ALL] возвращён только NET_RAW.
+# Показывает, что arping чинится возвратом права в под, а не атрибутом.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: add-pod
+  labels:
+    case: file-capabilities
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: container
+      image: archlinux:latest
+      command: ["sleep", "infinity"]
+      securityContext:
+        capabilities:
+          drop:
+            - ALL
+          add:
+            - NET_RAW

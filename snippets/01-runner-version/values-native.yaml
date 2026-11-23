@@ -1,0 +1,17 @@
+# Helm-релизы v_18_10_native и v_19_5_native.
+# Общий фрагмент. Отличается image.tag: alpine-v18.10.1 и alpine-v19.5.3.
+# Чарт 0.87.1 и 0.94.3. gitlabUrl на стенде подставляет Terraform.
+
+image:
+  tag: alpine-v18.10.1
+runners:
+  executor: kubernetes
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        image = "alpine:3.20"
+        [runners.kubernetes.build_container_security_context.seccomp_profile]
+          type = "RuntimeDefault"
+        [runners.kubernetes.build_container_security_context.app_armor_profile]
+          type = "RuntimeDefault"

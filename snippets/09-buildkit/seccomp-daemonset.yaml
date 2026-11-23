@@ -1,0 +1,53 @@
+# Доставка seccomp-профиля сборщика на узел.
+# Сначала ConfigMap из profile.json, затем этот файл, дождаться Ready.
+# Удаление DaemonSet не стирает файл в /var/lib/kubelet/seccomp.
+# Профиль: RuntimeDefault containerd 2.2.1 для amd64.
+# Добавлены mount, umount2, pivot_root, unshare, setns, sethostname, setdomainname.
+# clone разрешён вместе с флагами нового пространства: rootless так вызывает fork/exec.
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: buildkit-seccomp-installer
+  labels:
+    case: buildkit-seccomp
+spec:
+  selector:
+    matchLabels:
+      app: buildkit-seccomp-installer
+  template:
+    metadata:
+      labels:
+        app: buildkit-seccomp-installer
+        case: buildkit-seccomp
+    spec:
+      containers:
+        - name: installer
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              cp /profile/buildkit.json /host/var/lib/kubelet/seccomp/buildkit.json
+              touch /ready
+              sleep infinity
+          readinessProbe:
+            exec:
+              command: ["cat", "/ready"]
+            periodSeconds: 2
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: profile
+              mountPath: /profile
+              readOnly: true
+            - name: host-seccomp
+              mountPath: /host/var/lib/kubelet/seccomp
+      volumes:
+        - name: profile
+          configMap:
+            name: buildkit-seccomp-profile
+        - name: host-seccomp
+          hostPath:
+            path: /var/lib/kubelet/seccomp
+            type: DirectoryOrCreate

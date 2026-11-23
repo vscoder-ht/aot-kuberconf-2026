@@ -1,0 +1,6 @@
+apiVersion: v2
+name: stand-buildkit-profiles
+description: Доставка профилей seccomp и AppArmor сборки BuildKit на узел mk8s
+type: application
+version: 0.1.0
+appVersion: "1"
